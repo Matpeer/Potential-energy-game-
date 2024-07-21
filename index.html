@@ -127,7 +127,7 @@
         heightSlider.addEventListener('input', () => {
             if (gameState === 'setup') {
                 const height = parseInt(heightSlider.value);  // Now in meters
-                ball.y = canvas.height - height * (canvas.height / 104);
+                ball.y = canvas.height - height * (canvas.height / 104) - ball.radius;
             }
         });
 
@@ -153,7 +153,7 @@
             const stage = stages[currentStage];
             planetSelect.value = stage.planet;
             const height = parseInt(heightSlider.value);  // Now in meters
-            ball.y = canvas.height - height * (canvas.height / 104);
+            ball.y = canvas.height - height * (canvas.height / 104) - ball.radius;
             ball.velocity = 0;
             gameState = 'setup';
             impactSpeed = 0;
@@ -187,8 +187,8 @@
                 const dy = ball.velocity * dt + 0.5 * gravity * dt * dt;
                 ball.y += dy * (canvas.height / 104); // Scale to canvas
 
-                if (ball.y + ball.radius > canvas.height - target.height) {
-                    ball.y = canvas.height - target.height - ball.radius;
+                if (ball.y + ball.radius >= canvas.height) {
+                    ball.y = canvas.height - ball.radius;
                     impactSpeed = Math.abs(ball.velocity);
                     const targetSpeed = parseFloat(stages[currentStage].targetSpeed);
                     if (ball.x > target.x && ball.x < target.x + target.width) {
@@ -209,7 +209,7 @@
 
         function drawEnergy() {
             const maxHeight = 104; // Max height in meters
-            const currentHeight = (canvas.height - ball.y) / (canvas.height / 104);
+            const currentHeight = (canvas.height - ball.y - ball.radius) / (canvas.height / 104);
             const gravity = gravities[planetSelect.value];
             
             // Mass is arbitrary, but let's set it to 1 for simplicity
@@ -291,7 +291,7 @@
             drawFireworks();
 
             const stage = stages[currentStage];
-            const height = ((canvas.height - ball.y) / (canvas.height / 104)).toFixed(0);
+            const height = ((canvas.height - ball.y - ball.radius) / (canvas.height / 104)).toFixed(0);
 
             ctx.font = '18px Arial';
             ctx.fillStyle = 'black';
@@ -333,7 +333,7 @@
                 ctx.fillText(`פספסתם! מהירות פגיעה: ${impactSpeed.toFixed(2)} מ'/ש'. נסו שוב!`, canvas.width / 2, canvas.height / 2);
                 gameState = 'setup';
                 const height = parseInt(heightSlider.value);  // Now in meters
-                ball.y = canvas.height - height * (canvas.height / 104);
+                ball.y = canvas.height - height * (canvas.height / 104) - ball.radius;
             } else if (gameState === 'finished') {
                 ctx.textAlign = 'center';
                 ctx.font = '24px Arial';
@@ -353,6 +353,5 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('service-worker.js')
                 .then(registration => console.log('ServiceWorker registered'))
-                .catch(error => console.log('ServiceWorker registration failed: ', error));
-        
+                .catch(error => console.log('ServiceWorker registration
 ```

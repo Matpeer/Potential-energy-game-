@@ -1,4 +1,4 @@
-```html
+```html'
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -52,7 +52,7 @@
     <canvas id="gameCanvas"></canvas>
     <div id="gameControls">
         <label for="heightSlider">גובה: </label>
-        <input type="range" id="heightSlider" min="0" max="1000" value="500" step="1">
+        <input type="range" id="heightSlider" min="0" max="100" value="50" step="1">
         <button id="dropButton">הפל כדור</button>
         <select id="planetSelect">
             <option value="earth">כדור הארץ</option>
@@ -118,7 +118,7 @@
         // Event listeners
         heightSlider.addEventListener('input', () => {
             if (gameState === 'setup') {
-                const height = parseInt(heightSlider.value) / 10;  // Convert to meters
+                const height = parseInt(heightSlider.value);  // Now in meters
                 ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
             }
         });
@@ -143,7 +143,7 @@
             currentStage = stageIndex % stages.length;
             const stage = stages[currentStage];
             planetSelect.value = stage.planet;
-            const height = parseInt(heightSlider.value) / 10;  // Convert to meters
+            const height = parseInt(heightSlider.value);  // Now in meters
             ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
             ball.velocity = 0;
             gameState = 'setup';
@@ -168,12 +168,14 @@
         function updateBall(deltaTime) {
             if (gameState === 'dropping') {
                 const gravity = gravities[planetSelect.value];
+                const dt = deltaTime / 1000; // Convert to seconds
                 
                 // Update velocity: v = v0 + at
-                ball.velocity += gravity * (deltaTime / 1000);
+                ball.velocity += gravity * dt;
                 
-                // Update position: x = x0 + v*t + 0.5*a*t^2
-                ball.y += ball.velocity * (deltaTime / 1000) + 0.5 * gravity * Math.pow(deltaTime / 1000, 2);
+                // Update position: y = y0 + v0*t + 0.5*a*t^2
+                const dy = ball.velocity * dt + 0.5 * gravity * dt * dt;
+                ball.y += dy * ((canvas.height - target.height) / 100); // Scale to canvas
 
                 if (ball.y + ball.radius > canvas.height - target.height) {
                     ball.y = canvas.height - target.height - ball.radius;
@@ -195,17 +197,17 @@
         }
 
         function drawEnergy() {
-            const maxHeight = canvas.height - target.height - ball.radius;
-            const currentHeight = maxHeight - ball.y;
+            const maxHeight = 100; // Max height in meters
+            const currentHeight = ((canvas.height - target.height - ball.y) / (canvas.height - target.height) * 100);
             const gravity = gravities[planetSelect.value];
             
             // Mass is arbitrary, but let's set it to 1 for simplicity
             const mass = 1;
             
-            const potentialEnergy = mass * gravity * (currentHeight / (canvas.height - target.height) * 100);
+            const potentialEnergy = mass * gravity * currentHeight;
             const kineticEnergy = gameState === 'dropping' ? 0.5 * mass * ball.velocity * ball.velocity : 0;
             
-            const totalEnergy = mass * gravity * 100;  // 100 is the max height in meters
+            const totalEnergy = mass * gravity * maxHeight;
             
             const pePercentage = potentialEnergy / totalEnergy;
             const kePercentage = kineticEnergy / totalEnergy;
@@ -246,7 +248,7 @@
             drawIcon();
 
             const stage = stages[currentStage];
-            const height = ((canvas.height - target.height - ball.y) / (canvas.height - target.height) * 100).toFixed(1);
+            const height = ((canvas.height - target.height - ball.y) / (canvas.height - target.height) * 100).toFixed(0);
 
             ctx.font = '18px Arial';
             ctx.fillStyle = 'black';
@@ -273,7 +275,7 @@
                 ctx.textAlign = 'center';
                 ctx.fillText(`פספסתם! מהירות פגיעה: ${impactSpeed.toFixed(2)} מ'/ש'. נסו שוב!`, canvas.width / 2, canvas.height / 2);
                 gameState = 'setup';
-                const height = parseInt(heightSlider.value) / 10;  // Convert to meters
+                const height = parseInt(heightSlider.value);  // Now in meters
                 ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
             }
 

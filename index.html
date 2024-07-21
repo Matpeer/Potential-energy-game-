@@ -45,7 +45,7 @@
     <canvas id="gameCanvas"></canvas>
     <div id="gameControls">
         <label for="heightSlider">Height: </label>
-        <input type="range" id="heightSlider" min="50" max="550" value="300">
+        <input type="range" id="heightSlider" min="0" max="1000" value="500" step="1">
         <button id="dropButton">Drop Ball</button>
         <select id="planetSelect">
             <option value="earth">Earth</option>
@@ -75,16 +75,20 @@
         let impactSpeed = 0;
 
         const gravities = {
-            earth: 0.5,
-            moon: 0.08,
-            jupiter: 1.17
+            earth: 9.8,
+            moon: 1.62,
+            jupiter: 24.79
         };
 
+        function getRandomSpeed() {
+            return (Math.random() * 19 + 1).toFixed(1);  // Random speed between 1.0 and 20.0 m/s
+        }
+
         const stages = [
-            { planet: 'earth', targetSpeed: 5, message: 'Welcome to Earth! Hit the target at 5 m/s.' },
-            { planet: 'moon', targetSpeed: 3, message: 'Now try the Moon! Hit the target at 3 m/s.' },
-            { planet: 'jupiter', targetSpeed: 8, message: 'Jupiter challenge! Hit the target at 8 m/s.' },
-            { planet: 'earth', targetSpeed: 7, message: 'Back to Earth! Can you hit at 7 m/s?' }
+            { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'Welcome to Earth!' },
+            { planet: 'moon', targetSpeed: getRandomSpeed(), message: 'Now try the Moon!' },
+            { planet: 'jupiter', targetSpeed: getRandomSpeed(), message: 'Jupiter challenge!' },
+            { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'Back to Earth!' }
         ];
 
         // Game objects
@@ -106,7 +110,8 @@
         // Event listeners
         heightSlider.addEventListener('input', () => {
             if (gameState === 'setup') {
-                ball.y = canvas.height - parseInt(heightSlider.value) * (canvas.height / 600) - ball.radius;
+                const height = parseInt(heightSlider.value) / 10;  // Convert to meters
+                ball.y = canvas.height - (height / 100) * (canvas.height - target.height - ball.radius) - ball.radius;
             }
         });
 
@@ -129,10 +134,12 @@
             currentStage = stageIndex % stages.length;
             const stage = stages[currentStage];
             planetSelect.value = stage.planet;
-            ball.y = canvas.height - parseInt(heightSlider.value) * (canvas.height / 600) - ball.radius;
+            const height = parseInt(heightSlider.value) / 10;  // Convert to meters
+            ball.y = canvas.height - (height / 100) * (canvas.height - target.height - ball.radius) - ball.radius;
             ball.velocity = 0;
             gameState = 'setup';
             impactSpeed = 0;
+            stage.targetSpeed = getRandomSpeed();  // Set a new random target speed for each stage
         }
 
         function drawBall() {
@@ -152,13 +159,13 @@
         function updateBall() {
             if (gameState === 'dropping') {
                 const gravity = gravities[planetSelect.value];
-                ball.velocity += gravity;
-                ball.y += ball.velocity;
+                ball.velocity += gravity / 60;  // Adjust for 60 FPS
+                ball.y += ball.velocity / 60;  // Adjust for 60 FPS
 
                 if (ball.y + ball.radius > canvas.height - target.height) {
                     ball.y = canvas.height - target.height - ball.radius;
                     impactSpeed = Math.abs(ball.velocity);
-                    const targetSpeed = stages[currentStage].targetSpeed;
+                    const targetSpeed = parseFloat(stages[currentStage].targetSpeed);
                     if (ball.x > target.x && ball.x < target.x + target.width) {
                         if (Math.abs(impactSpeed - targetSpeed) < 0.5) {
                             gameState = 'scored';
@@ -176,18 +183,20 @@
 
         function drawEnergy() {
             const maxHeight = canvas.height - target.height - ball.radius;
-            const potentialEnergy = (maxHeight - ball.y) / maxHeight;
-            const kineticEnergy = Math.min(ball.velocity * ball.velocity / 100, 1);
+            const height = maxHeight - ball.y;
+            const totalEnergy = maxHeight;
+            const potentialEnergy = height / totalEnergy;
+            const kineticEnergy = 1 - potentialEnergy;
 
             ctx.fillStyle = 'blue';
-            ctx.fillRect(50, 50, 20, 100 * potentialEnergy);
+            ctx.fillRect(canvas.width - 100, canvas.height - 120, 20, -100 * potentialEnergy);
             ctx.fillStyle = 'orange';
-            ctx.fillRect(80, 50, 20, 100 * kineticEnergy);
+            ctx.fillRect(canvas.width - 70, canvas.height - 120, 20, -100 * kineticEnergy);
 
             ctx.font = '14px Arial';
             ctx.fillStyle = 'black';
-            ctx.fillText('PE', 50, 170);
-            ctx.fillText('KE', 80, 170);
+            ctx.fillText('PE', canvas.width - 100, canvas.height - 100);
+            ctx.fillText('KE', canvas.width - 70, canvas.height - 100);
         }
 
         function gameLoop() {
@@ -199,19 +208,24 @@
             drawEnergy();
 
             const stage = stages[currentStage];
+            const height = ((canvas.height - target.height - ball.radius - ball.y) / (canvas.height - target.height - ball.radius) * 100).toFixed(1);
 
             ctx.font = '18px Arial';
             ctx.fillStyle = 'black';
             ctx.fillText('Score: ' + score, 10, 30);
             ctx.fillText(`Target Speed: ${stage.targetSpeed} m/s`, 10, 60);
             ctx.fillText(`Current Speed: ${Math.abs(ball.velocity).toFixed(2)} m/s`, 10, 90);
-            
-            // Display actual height
-            const actualHeight = ((canvas.height - target.height - ball.radius - ball.y) / (canvas.height - target.height - ball.radius) * 550).toFixed(0);
-            ctx.fillText(`Height: ${actualHeight} m`, 10, 120);
+            ctx.fillText(`Height: ${height} m`, 10, 120);
 
             ctx.font = '14px Arial';
             ctx.fillText(stage.message, 10, 150);
+            ctx.fillText(`Planet: ${stage.planet}`, 10, 180);
+
+            // Energy equations
+            ctx.textAlign = 'right';
+            ctx.fillText('PE = mgh', canvas.width - 10, 30);
+            ctx.fillText('KE = ½mv²', canvas.width - 10, 60);
+            ctx.textAlign = 'left';
 
             if (gameState === 'scored') {
                 ctx.fillText('Great job! Perfect speed! Click to continue', canvas.width / 2 - 150, canvas.height / 2);
@@ -219,7 +233,8 @@
             } else if (gameState === 'missed') {
                 ctx.fillText(`Missed! Impact speed: ${impactSpeed.toFixed(2)} m/s. Try again!`, canvas.width / 2 - 150, canvas.height / 2);
                 gameState = 'setup';
-                ball.y = canvas.height - parseInt(heightSlider.value) * (canvas.height / 600) - ball.radius;
+                const height = parseInt(heightSlider.value) / 10;  // Convert to meters
+                ball.y = canvas.height - (height / 100) * (canvas.height - target.height - ball.radius) - ball.radius;
             }
 
             requestAnimationFrame(gameLoop);

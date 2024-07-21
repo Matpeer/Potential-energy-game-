@@ -1,10 +1,10 @@
 ```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Planet Energy Conservation Game</title>
+    <title>משחק שימור אנרגיה רב-כוכבי</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="icon-500x500.png">
     <link rel="apple-touch-icon" href="icon-500x500.png">
@@ -35,6 +35,11 @@
             font-size: 16px;
             padding: 5px;
         }
+        #title {
+            text-align: center;
+            max-width: 800px;
+            margin-bottom: 10px;
+        }
         @media (max-width: 600px) {
             canvas {
                 max-height: 60vh;
@@ -43,15 +48,16 @@
     </style>
 </head>
 <body>
+    <div id="title">הזז את הפס הכחול כדי להעלות ולהוריד את הכדור כדי לתת לו אנרגיה פוטנציאלית על מנת להגיע לרצפה במהירות המבוקשת</div>
     <canvas id="gameCanvas"></canvas>
     <div id="gameControls">
-        <label for="heightSlider">Height: </label>
+        <label for="heightSlider">גובה: </label>
         <input type="range" id="heightSlider" min="0" max="1000" value="500" step="1">
-        <button id="dropButton">Drop Ball</button>
+        <button id="dropButton">הפל כדור</button>
         <select id="planetSelect">
-            <option value="earth">Earth</option>
-            <option value="moon">Moon</option>
-            <option value="jupiter">Jupiter</option>
+            <option value="earth">כדור הארץ</option>
+            <option value="moon">ירח</option>
+            <option value="jupiter">צדק</option>
         </select>
     </div>
     <script>
@@ -74,6 +80,7 @@
         let currentStage = 0;
         let gameState = 'setup'; // 'setup', 'dropping', 'scored', 'missed'
         let impactSpeed = 0;
+        let lastTime = 0;
 
         const gravities = {
             earth: 9.8,
@@ -86,10 +93,10 @@
         }
 
         const stages = [
-            { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'Welcome to Earth!' },
-            { planet: 'moon', targetSpeed: getRandomSpeed(), message: 'Now try the Moon!' },
-            { planet: 'jupiter', targetSpeed: getRandomSpeed(), message: 'Jupiter challenge!' },
-            { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'Back to Earth!' }
+            { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'ברוכים הבאים לכדור הארץ!' },
+            { planet: 'moon', targetSpeed: getRandomSpeed(), message: 'עכשיו נסו את הירח!' },
+            { planet: 'jupiter', targetSpeed: getRandomSpeed(), message: 'אתגר צדק!' },
+            { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'חזרה לכדור הארץ!' }
         ];
 
         // Game objects
@@ -121,6 +128,7 @@
                 gameState = 'dropping';
                 ball.velocity = 0;
                 impactSpeed = 0;
+                lastTime = performance.now();
             }
         });
 
@@ -157,16 +165,15 @@
             ctx.fillRect(target.x, target.y, target.width, target.height);
         }
 
-        function updateBall() {
+        function updateBall(deltaTime) {
             if (gameState === 'dropping') {
                 const gravity = gravities[planetSelect.value];
-                const timeStep = 1 / 60;  // For 60 FPS
                 
                 // Update velocity: v = v0 + at
-                ball.velocity += gravity * timeStep;
+                ball.velocity += gravity * (deltaTime / 1000);
                 
                 // Update position: x = x0 + v*t + 0.5*a*t^2
-                ball.y += ball.velocity * timeStep + 0.5 * gravity * timeStep * timeStep;
+                ball.y += ball.velocity * (deltaTime / 1000) + 0.5 * gravity * Math.pow(deltaTime / 1000, 2);
 
                 if (ball.y + ball.radius > canvas.height - target.height) {
                     ball.y = canvas.height - target.height - ball.radius;
@@ -226,12 +233,15 @@
             img.src = 'icon-500x500.png';
         }
 
-        function gameLoop() {
+        function gameLoop(currentTime) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             drawTarget();
             drawBall();
-            updateBall();
+            updateBall(deltaTime);
             drawEnergy();
             drawIcon();
 
@@ -240,26 +250,28 @@
 
             ctx.font = '18px Arial';
             ctx.fillStyle = 'black';
-            ctx.fillText('Score: ' + score, 10, 30);
-            ctx.fillText(`Target Speed: ${stage.targetSpeed} m/s`, 10, 60);
-            ctx.fillText(`Current Speed: ${Math.abs(ball.velocity).toFixed(2)} m/s`, 10, 90);
-            ctx.fillText(`Height: ${height} m`, 10, 120);
+            ctx.textAlign = 'right';
+            ctx.fillText('ניקוד: ' + score, canvas.width - 10, 30);
+            ctx.fillText(`מהירות יעד: ${stage.targetSpeed} מ'/ש'`, canvas.width - 10, 60);
+            ctx.fillText(`מהירות נוכחית: ${Math.abs(ball.velocity).toFixed(2)} מ'/ש'`, canvas.width - 10, 90);
+            ctx.fillText(`גובה: ${height} מ'`, canvas.width - 10, 120);
 
             ctx.font = '14px Arial';
-            ctx.fillText(stage.message, 10, 150);
-            ctx.fillText(`Planet: ${stage.planet}`, 10, 180);
+            ctx.fillText(stage.message, canvas.width - 10, 150);
+            ctx.fillText(`כוכב לכת: ${stage.planet === 'earth' ? 'כדור הארץ' : stage.planet === 'moon' ? 'ירח' : 'צדק'}`, canvas.width - 10, 180);
 
             // Energy equations
-            ctx.textAlign = 'right';
-            ctx.fillText('PE = mgh', canvas.width - 10, 30);
-            ctx.fillText('KE = ½mv²', canvas.width - 10, 60);
             ctx.textAlign = 'left';
+            ctx.fillText('PE = mgh', 10, 30);
+            ctx.fillText('KE = ½mv²', 10, 60);
 
             if (gameState === 'scored') {
-                ctx.fillText('Great job! Perfect speed! Click to continue', canvas.width / 2 - 150, canvas.height / 2);
+                ctx.textAlign = 'center';
+                ctx.fillText('כל הכבוד! מהירות מושלמת! לחצו להמשיך', canvas.width / 2, canvas.height / 2);
                 setStage(currentStage);
             } else if (gameState === 'missed') {
-                ctx.fillText(`Missed! Impact speed: ${impactSpeed.toFixed(2)} m/s. Try again!`, canvas.width / 2 - 150, canvas.height / 2);
+                ctx.textAlign = 'center';
+                ctx.fillText(`פספסתם! מהירות פגיעה: ${impactSpeed.toFixed(2)} מ'/ש'. נסו שוב!`, canvas.width / 2, canvas.height / 2);
                 gameState = 'setup';
                 const height = parseInt(heightSlider.value) / 10;  // Convert to meters
                 ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
@@ -269,7 +281,7 @@
         }
 
         setStage(0);
-        gameLoop();
+        requestAnimationFrame(gameLoop);
     </script>
     <script>
         if ('serviceWorker' in navigator) {

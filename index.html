@@ -72,6 +72,7 @@
         let score = 0;
         let currentStage = 0;
         let gameState = 'setup'; // 'setup', 'dropping', 'scored', 'missed'
+        let impactSpeed = 0;
 
         const gravities = {
             earth: 0.5,
@@ -96,8 +97,7 @@
         };
 
         const target = {
-            x: canvas.width * 0.75,
-            y: canvas.height - 50,
+            x: canvas.width / 2 - 50,
             width: 100,
             height: 20,
             color: 'green'
@@ -106,7 +106,7 @@
         // Event listeners
         heightSlider.addEventListener('input', () => {
             if (gameState === 'setup') {
-                ball.y = parseInt(heightSlider.value) * (canvas.height / 600);
+                ball.y = canvas.height - parseInt(heightSlider.value) * (canvas.height / 600) - ball.radius;
             }
         });
 
@@ -114,6 +114,7 @@
             if (gameState === 'setup') {
                 gameState = 'dropping';
                 ball.velocity = 0;
+                impactSpeed = 0;
             }
         });
 
@@ -128,9 +129,10 @@
             currentStage = stageIndex % stages.length;
             const stage = stages[currentStage];
             planetSelect.value = stage.planet;
-            ball.y = parseInt(heightSlider.value) * (canvas.height / 600);
+            ball.y = canvas.height - parseInt(heightSlider.value) * (canvas.height / 600) - ball.radius;
             ball.velocity = 0;
             gameState = 'setup';
+            impactSpeed = 0;
         }
 
         function drawBall() {
@@ -142,6 +144,7 @@
         }
 
         function drawTarget() {
+            target.y = canvas.height - target.height;
             ctx.fillStyle = target.color;
             ctx.fillRect(target.x, target.y, target.width, target.height);
         }
@@ -152,15 +155,18 @@
                 ball.velocity += gravity;
                 ball.y += ball.velocity;
 
-                if (ball.y + ball.radius > canvas.height) {
-                    ball.y = canvas.height - ball.radius;
-                    const impactSpeed = Math.abs(ball.velocity);
+                if (ball.y + ball.radius > canvas.height - target.height) {
+                    ball.y = canvas.height - target.height - ball.radius;
+                    impactSpeed = Math.abs(ball.velocity);
                     const targetSpeed = stages[currentStage].targetSpeed;
-                    if (ball.x > target.x && ball.x < target.x + target.width &&
-                        Math.abs(impactSpeed - targetSpeed) < 0.5) {
-                        gameState = 'scored';
-                        score++;
-                        currentStage++;
+                    if (ball.x > target.x && ball.x < target.x + target.width) {
+                        if (Math.abs(impactSpeed - targetSpeed) < 0.5) {
+                            gameState = 'scored';
+                            score++;
+                            currentStage++;
+                        } else {
+                            gameState = 'missed';
+                        }
                     } else {
                         gameState = 'missed';
                     }
@@ -169,7 +175,7 @@
         }
 
         function drawEnergy() {
-            const maxHeight = canvas.height;
+            const maxHeight = canvas.height - target.height - ball.radius;
             const potentialEnergy = (maxHeight - ball.y) / maxHeight;
             const kineticEnergy = Math.min(ball.velocity * ball.velocity / 100, 1);
 
@@ -197,19 +203,23 @@
             ctx.font = '18px Arial';
             ctx.fillStyle = 'black';
             ctx.fillText('Score: ' + score, 10, 30);
-            ctx.fillText(`Target: ${stage.targetSpeed} m/s`, 10, 60);
-            ctx.fillText(`Speed: ${Math.abs(ball.velocity).toFixed(2)} m/s`, 10, 90);
+            ctx.fillText(`Target Speed: ${stage.targetSpeed} m/s`, 10, 60);
+            ctx.fillText(`Current Speed: ${Math.abs(ball.velocity).toFixed(2)} m/s`, 10, 90);
+            
+            // Display actual height
+            const actualHeight = ((canvas.height - target.height - ball.radius - ball.y) / (canvas.height - target.height - ball.radius) * 550).toFixed(0);
+            ctx.fillText(`Height: ${actualHeight} m`, 10, 120);
 
             ctx.font = '14px Arial';
-            ctx.fillText(stage.message, 10, 120);
+            ctx.fillText(stage.message, 10, 150);
 
             if (gameState === 'scored') {
-                ctx.fillText('Great job! Drop for next stage', canvas.width / 2 - 100, canvas.height / 2);
+                ctx.fillText('Great job! Perfect speed! Click to continue', canvas.width / 2 - 150, canvas.height / 2);
                 setStage(currentStage);
             } else if (gameState === 'missed') {
-                ctx.fillText('Try again! Drop to retry', canvas.width / 2 - 80, canvas.height / 2);
+                ctx.fillText(`Missed! Impact speed: ${impactSpeed.toFixed(2)} m/s. Try again!`, canvas.width / 2 - 150, canvas.height / 2);
                 gameState = 'setup';
-                ball.y = parseInt(heightSlider.value) * (canvas.height / 600);
+                ball.y = canvas.height - parseInt(heightSlider.value) * (canvas.height / 600) - ball.radius;
             }
 
             requestAnimationFrame(gameLoop);

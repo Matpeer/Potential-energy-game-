@@ -183,15 +183,20 @@
 
         function drawEnergy() {
             const maxHeight = canvas.height - target.height - ball.radius;
-            const height = maxHeight - ball.y;
-            const totalEnergy = maxHeight;
-            const potentialEnergy = height / totalEnergy;
-            const kineticEnergy = 1 - potentialEnergy;
+            const currentHeight = maxHeight - ball.y;
+            const gravity = gravities[planetSelect.value];
+            
+            const totalEnergy = maxHeight * gravity;
+            const potentialEnergy = currentHeight * gravity;
+            const kineticEnergy = 0.5 * ball.velocity * ball.velocity;
+            
+            const pePercentage = potentialEnergy / totalEnergy;
+            const kePercentage = kineticEnergy / totalEnergy;
 
             ctx.fillStyle = 'blue';
-            ctx.fillRect(canvas.width - 100, canvas.height - 120, 20, -100 * potentialEnergy);
+            ctx.fillRect(canvas.width - 100, canvas.height - 120, 20, -100 * pePercentage);
             ctx.fillStyle = 'orange';
-            ctx.fillRect(canvas.width - 70, canvas.height - 120, 20, -100 * kineticEnergy);
+            ctx.fillRect(canvas.width - 70, canvas.height - 120, 20, -100 * kePercentage);
 
             ctx.font = '14px Arial';
             ctx.fillStyle = 'black';

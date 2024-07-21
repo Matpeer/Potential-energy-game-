@@ -90,14 +90,21 @@
             jupiter: 24.79
         };
 
-        function getRandomSpeed() {
-            return (Math.random() * 42 + 2).toFixed(1);  // Random speed between 2.0 and 44.0 m/s
+        const speedRanges = {
+            earth: { min: 2, max: 44 },
+            moon: { min: 2, max: 18 },
+            jupiter: { min: 7, max: 70 }
+        };
+
+        function getRandomSpeed(planet) {
+            const range = speedRanges[planet];
+            return (Math.random() * (range.max - range.min) + range.min).toFixed(1);
         }
 
         const stages = [
-            { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'ברוכים הבאים לכדור הארץ!' },
-            { planet: 'moon', targetSpeed: getRandomSpeed(), message: 'עכשיו נסו את הירח!' },
-            { planet: 'jupiter', targetSpeed: getRandomSpeed(), message: 'אתגר צדק!' },
+            { planet: 'earth', targetSpeed: getRandomSpeed('earth'), message: 'ברוכים הבאים לכדור הארץ!' },
+            { planet: 'moon', targetSpeed: getRandomSpeed('moon'), message: 'עכשיו נסו את הירח!' },
+            { planet: 'jupiter', targetSpeed: getRandomSpeed('jupiter'), message: 'אתגר צדק!' },
         ];
 
         // Game objects
@@ -120,7 +127,7 @@
         heightSlider.addEventListener('input', () => {
             if (gameState === 'setup') {
                 const height = parseInt(heightSlider.value);  // Now in meters
-                ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
+                ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100);
             }
         });
 
@@ -146,11 +153,11 @@
             const stage = stages[currentStage];
             planetSelect.value = stage.planet;
             const height = parseInt(heightSlider.value);  // Now in meters
-            ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
+            ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100);
             ball.velocity = 0;
             gameState = 'setup';
             impactSpeed = 0;
-            stage.targetSpeed = getRandomSpeed();  // Set a new random target speed for each stage
+            stage.targetSpeed = getRandomSpeed(stage.planet);  // Set a new random target speed for each stage
             fireworks = [];
         }
 
@@ -202,7 +209,7 @@
 
         function drawEnergy() {
             const maxHeight = 100; // Max height in meters
-            const currentHeight = ((canvas.height - target.height - ball.y) / (canvas.height - target.height) * 100);
+            const currentHeight = (canvas.height - target.height - ball.y) / ((canvas.height - target.height) / 100);
             const gravity = gravities[planetSelect.value];
             
             // Mass is arbitrary, but let's set it to 1 for simplicity
@@ -284,7 +291,7 @@
             drawFireworks();
 
             const stage = stages[currentStage];
-            const height = ((canvas.height - target.height - ball.y) / (canvas.height - target.height) * 100).toFixed(0);
+            const height = ((canvas.height - target.height - ball.y) / ((canvas.height - target.height) / 100)).toFixed(0);
 
             ctx.font = '18px Arial';
             ctx.fillStyle = 'black';
@@ -326,7 +333,7 @@
                 ctx.fillText(`פספסתם! מהירות פגיעה: ${impactSpeed.toFixed(2)} מ'/ש'. נסו שוב!`, canvas.width / 2, canvas.height / 2);
                 gameState = 'setup';
                 const height = parseInt(heightSlider.value);  // Now in meters
-                ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
+                ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100);
             } else if (gameState === 'finished') {
                 ctx.textAlign = 'center';
                 ctx.font = '24px Arial';
@@ -345,10 +352,5 @@
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('service-worker.js')
-                .then(registration => console.log('ServiceWorker registered'))
-                .catch(error => console.log('ServiceWorker registration failed: ', error));
-        }
-    </script>
-</body>
-</html>
+                .then(
 ```

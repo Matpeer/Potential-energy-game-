@@ -1,4 +1,3 @@
-```html'
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -78,9 +77,12 @@
         // Game variables
         let score = 0;
         let currentStage = 0;
-        let gameState = 'setup'; // 'setup', 'dropping', 'scored', 'missed'
+        let gameState = 'setup'; // 'setup', 'dropping', 'scored', 'missed', 'finished'
         let impactSpeed = 0;
         let lastTime = 0;
+        let fireworks = [];
+        let delayTimer = 0;
+        let loopCount = 0;
 
         const gravities = {
             earth: 9.8,
@@ -96,7 +98,6 @@
             { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'ברוכים הבאים לכדור הארץ!' },
             { planet: 'moon', targetSpeed: getRandomSpeed(), message: 'עכשיו נסו את הירח!' },
             { planet: 'jupiter', targetSpeed: getRandomSpeed(), message: 'אתגר צדק!' },
-            { planet: 'earth', targetSpeed: getRandomSpeed(), message: 'חזרה לכדור הארץ!' }
         ];
 
         // Game objects
@@ -129,6 +130,7 @@
                 ball.velocity = 0;
                 impactSpeed = 0;
                 lastTime = performance.now();
+                score--; // Deduct 1 point for each try
             }
         });
 
@@ -149,6 +151,7 @@
             gameState = 'setup';
             impactSpeed = 0;
             stage.targetSpeed = getRandomSpeed();  // Set a new random target speed for each stage
+            fireworks = [];
         }
 
         function drawBall() {
@@ -182,10 +185,11 @@
                     impactSpeed = Math.abs(ball.velocity);
                     const targetSpeed = parseFloat(stages[currentStage].targetSpeed);
                     if (ball.x > target.x && ball.x < target.x + target.width) {
-                        if (Math.abs(impactSpeed - targetSpeed) < 0.5) {
+                        if (Math.abs(impactSpeed - targetSpeed) < 1) {
                             gameState = 'scored';
-                            score++;
-                            currentStage++;
+                            score += 10; // Add 10 points for correct answer
+                            createFireworks(20);
+                            delayTimer = 5000; // 5 seconds delay
                         } else {
                             gameState = 'missed';
                         }
@@ -235,6 +239,36 @@
             img.src = 'icon-500x500.png';
         }
 
+        function createFireworks(num) {
+            for (let i = 0; i < num; i++) {
+                fireworks.push({
+                    x: Math.random() * canvas.width,
+                    y: canvas.height,
+                    size: Math.random() * 2 + 1,
+                    speedY: -(Math.random() * 3 + 3)
+                });
+            }
+        }
+
+        function updateFireworks() {
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                fireworks[i].y += fireworks[i].speedY;
+                fireworks[i].speedY += 0.07;
+                if (fireworks[i].y > canvas.height) {
+                    fireworks.splice(i, 1);
+                }
+            }
+        }
+
+        function drawFireworks() {
+            ctx.fillStyle = 'yellow';
+            for (let fw of fireworks) {
+                ctx.beginPath();
+                ctx.arc(fw.x, fw.y, fw.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
         function gameLoop(currentTime) {
             const deltaTime = currentTime - lastTime;
             lastTime = currentTime;
@@ -246,6 +280,8 @@
             updateBall(deltaTime);
             drawEnergy();
             drawIcon();
+            updateFireworks();
+            drawFireworks();
 
             const stage = stages[currentStage];
             const height = ((canvas.height - target.height - ball.y) / (canvas.height - target.height) * 100).toFixed(0);
@@ -269,17 +305,38 @@
 
             if (gameState === 'scored') {
                 ctx.textAlign = 'center';
-                ctx.fillText('כל הכבוד! מהירות מושלמת! לחצו להמשיך', canvas.width / 2, canvas.height / 2);
-                setStage(currentStage);
+                ctx.fillText('כל הכבוד! מהירות מושלמת!', canvas.width / 2, canvas.height / 2);
+                delayTimer -= deltaTime;
+                if (delayTimer <= 0) {
+                    currentStage++;
+                    if (currentStage >= stages.length) {
+                        loopCount++;
+                        if (loopCount >= 2) {
+                            gameState = 'finished';
+                        } else {
+                            currentStage = 0;
+                        }
+                    }
+                    if (gameState !== 'finished') {
+                        setStage(currentStage);
+                    }
+                }
             } else if (gameState === 'missed') {
                 ctx.textAlign = 'center';
                 ctx.fillText(`פספסתם! מהירות פגיעה: ${impactSpeed.toFixed(2)} מ'/ש'. נסו שוב!`, canvas.width / 2, canvas.height / 2);
                 gameState = 'setup';
                 const height = parseInt(heightSlider.value);  // Now in meters
                 ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
+            } else if (gameState === 'finished') {
+                ctx.textAlign = 'center';
+                ctx.font = '24px Arial';
+                ctx.fillText('המשחק הסתיים!', canvas.width / 2, canvas.height / 2 - 30);
+                ctx.fillText(`הניקוד הסופי שלך: ${score}`, canvas.width / 2, canvas.height / 2 + 30);
             }
 
-            requestAnimationFrame(gameLoop);
+            if (gameState !== 'finished') {
+                requestAnimationFrame(gameLoop);
+            }
         }
 
         setStage(0);

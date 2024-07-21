@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Planet Energy Conservation Game</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="icon-500x500.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-500x500.png">
+    <link rel="apple-touch-icon" href="icon-500x500.png">
     <style>
         body {
             margin: 0;
@@ -81,7 +82,7 @@
         };
 
         function getRandomSpeed() {
-            return (Math.random() * 19 + 1).toFixed(1);  // Random speed between 1.0 and 20.0 m/s
+            return (Math.random() * 42 + 2).toFixed(1);  // Random speed between 2.0 and 44.0 m/s
         }
 
         const stages = [
@@ -111,7 +112,7 @@
         heightSlider.addEventListener('input', () => {
             if (gameState === 'setup') {
                 const height = parseInt(heightSlider.value) / 10;  // Convert to meters
-                ball.y = canvas.height - (height / 100) * (canvas.height - target.height - ball.radius) - ball.radius;
+                ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
             }
         });
 
@@ -135,7 +136,7 @@
             const stage = stages[currentStage];
             planetSelect.value = stage.planet;
             const height = parseInt(heightSlider.value) / 10;  // Convert to meters
-            ball.y = canvas.height - (height / 100) * (canvas.height - target.height - ball.radius) - ball.radius;
+            ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
             ball.velocity = 0;
             gameState = 'setup';
             impactSpeed = 0;
@@ -159,8 +160,13 @@
         function updateBall() {
             if (gameState === 'dropping') {
                 const gravity = gravities[planetSelect.value];
-                ball.velocity += gravity / 60;  // Adjust for 60 FPS
-                ball.y += ball.velocity / 60;  // Adjust for 60 FPS
+                const timeStep = 1 / 60;  // For 60 FPS
+                
+                // Update velocity: v = v0 + at
+                ball.velocity += gravity * timeStep;
+                
+                // Update position: x = x0 + v*t + 0.5*a*t^2
+                ball.y += ball.velocity * timeStep + 0.5 * gravity * timeStep * timeStep;
 
                 if (ball.y + ball.radius > canvas.height - target.height) {
                     ball.y = canvas.height - target.height - ball.radius;
@@ -186,9 +192,13 @@
             const currentHeight = maxHeight - ball.y;
             const gravity = gravities[planetSelect.value];
             
-            const totalEnergy = maxHeight * gravity;
-            const potentialEnergy = currentHeight * gravity;
-            const kineticEnergy = 0.5 * ball.velocity * ball.velocity;
+            // Mass is arbitrary, but let's set it to 1 for simplicity
+            const mass = 1;
+            
+            const potentialEnergy = mass * gravity * (currentHeight / (canvas.height - target.height) * 100);
+            const kineticEnergy = gameState === 'dropping' ? 0.5 * mass * ball.velocity * ball.velocity : 0;
+            
+            const totalEnergy = mass * gravity * 100;  // 100 is the max height in meters
             
             const pePercentage = potentialEnergy / totalEnergy;
             const kePercentage = kineticEnergy / totalEnergy;
@@ -202,6 +212,18 @@
             ctx.fillStyle = 'black';
             ctx.fillText('PE', canvas.width - 100, canvas.height - 100);
             ctx.fillText('KE', canvas.width - 70, canvas.height - 100);
+
+            // Display energy values
+            ctx.fillText(`PE: ${potentialEnergy.toFixed(2)} J`, canvas.width - 150, canvas.height - 80);
+            ctx.fillText(`KE: ${kineticEnergy.toFixed(2)} J`, canvas.width - 150, canvas.height - 60);
+        }
+
+        function drawIcon() {
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 10, canvas.height - 60, 50, 50);
+            }
+            img.src = 'icon-500x500.png';
         }
 
         function gameLoop() {
@@ -211,9 +233,10 @@
             drawBall();
             updateBall();
             drawEnergy();
+            drawIcon();
 
             const stage = stages[currentStage];
-            const height = ((canvas.height - target.height - ball.radius - ball.y) / (canvas.height - target.height - ball.radius) * 100).toFixed(1);
+            const height = ((canvas.height - target.height - ball.y) / (canvas.height - target.height) * 100).toFixed(1);
 
             ctx.font = '18px Arial';
             ctx.fillStyle = 'black';
@@ -239,7 +262,7 @@
                 ctx.fillText(`Missed! Impact speed: ${impactSpeed.toFixed(2)} m/s. Try again!`, canvas.width / 2 - 150, canvas.height / 2);
                 gameState = 'setup';
                 const height = parseInt(heightSlider.value) / 10;  // Convert to meters
-                ball.y = canvas.height - (height / 100) * (canvas.height - target.height - ball.radius) - ball.radius;
+                ball.y = canvas.height - target.height - height * ((canvas.height - target.height) / 100) - ball.radius;
             }
 
             requestAnimationFrame(gameLoop);
